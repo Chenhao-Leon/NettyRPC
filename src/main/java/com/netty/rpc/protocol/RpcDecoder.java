@@ -33,7 +33,7 @@ public class RpcDecoder extends ByteToMessageDecoder {
         }
         byte[] data = new byte[dataLength];
         in.readBytes(data);
-
+        // TODO Protostuff序列化的优缺点
         Object obj = SerializationUtil.deserialize(data, genericClass);
         //Object obj = JsonUtil.deserialize(data,genericClass); // Not use this, have some bugs
         out.add(obj);

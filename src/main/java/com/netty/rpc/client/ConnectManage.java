@@ -1,11 +1,15 @@
 package com.netty.rpc.client;
 
+import com.netty.rpc.protocol.RpcDecoder;
+import com.netty.rpc.protocol.RpcEncoder;
+import com.netty.rpc.protocol.RpcRequest;
+import com.netty.rpc.protocol.RpcResponse;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +24,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * RPC Connect Manage of ZooKeeper
+ * 采用单例模式，用于管理连接
  * Created by luxiaoxun on 2016-03-16.
  */
 public class ConnectManage {
@@ -31,7 +35,10 @@ public class ConnectManage {
     private static ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(16, 16,
             600L, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(65536));
 
+    // 实现负载均衡需要使用的容器
     private CopyOnWriteArrayList<RpcClientHandler> connectedHandlers = new CopyOnWriteArrayList<>();
+    //不能使用set的原因是在移除无效结点时需要关闭该channel，所以需要通过Handler获取
+    //作用：记录注册机所有结点
     private Map<InetSocketAddress, RpcClientHandler> connectedServerNodes = new ConcurrentHashMap<>();
 
     private ReentrantLock lock = new ReentrantLock();
@@ -56,8 +63,8 @@ public class ConnectManage {
 
     public void updateConnectedServer(List<String> allServerAddress) {
         if (allServerAddress != null) {
-            if (allServerAddress.size() > 0) {  // Get available server node
-                //update local serverNodes cache
+            if (allServerAddress.size() > 0) {
+                //将服务器结点加到set容器
                 HashSet<InetSocketAddress> newAllServerNodeSet = new HashSet<InetSocketAddress>();
                 for (int i = 0; i < allServerAddress.size(); ++i) {
                     String[] array = allServerAddress.get(i).split(":");
@@ -69,14 +76,15 @@ public class ConnectManage {
                     }
                 }
 
-                // Add new server node
+                // 增加新的服务器结点
                 for (final InetSocketAddress serverNodeAddress : newAllServerNodeSet) {
                     if (!connectedServerNodes.keySet().contains(serverNodeAddress)) {
                         connectServerNode(serverNodeAddress);
+                        logger.info("发现新服务器结点" + serverNodeAddress);
                     }
                 }
 
-                // Close and remove invalid server nodes
+                // 移除无效的服务器结点
                 for (int i = 0; i < connectedHandlers.size(); ++i) {
                     RpcClientHandler connectedServerHandler = connectedHandlers.get(i);
                     SocketAddress remotePeer = connectedServerHandler.getRemotePeer();
@@ -88,6 +96,7 @@ public class ConnectManage {
                         }
                         connectedServerNodes.remove(remotePeer);
                         connectedHandlers.remove(connectedServerHandler);
+                        logger.info("移除服务结点" + remotePeer);
                     }
                 }
 
@@ -119,14 +128,28 @@ public class ConnectManage {
                 Bootstrap b = new Bootstrap();
                 b.group(eventLoopGroup)
                         .channel(NioSocketChannel.class)
-                        .handler(new RpcClientInitializer());
+                        .handler(new ChannelInitializer< SocketChannel >(){
+                            @Override
+                            protected void initChannel(SocketChannel socketChannel) throws Exception {
+                                ChannelPipeline cp = socketChannel.pipeline();
+                                cp.addLast(new RpcEncoder(RpcRequest.class));
+                                cp.addLast(new LengthFieldBasedFrameDecoder(65536, 0, 4, 0, 0));
+                                cp.addLast(new RpcDecoder(RpcResponse.class));
+                                cp.addLast(new RpcClientHandler());
+                            }
+                        });
 
                 ChannelFuture channelFuture = b.connect(remotePeer);
                 channelFuture.addListener(new ChannelFutureListener() {
+                    /**
+                     * 连接成功后执行此方法
+                     * @param channelFuture
+                     * @throws Exception
+                     */
                     @Override
                     public void operationComplete(final ChannelFuture channelFuture) throws Exception {
                         if (channelFuture.isSuccess()) {
-                            logger.debug("Successfully connect to remote server. remote peer = " + remotePeer);
+                            logger.info("Successfully connect to remote server. remote peer = " + remotePeer);
                             RpcClientHandler handler = channelFuture.channel().pipeline().get(RpcClientHandler.class);
                             addHandler(handler);
                         }
@@ -152,15 +175,18 @@ public class ConnectManage {
         }
     }
 
+    // TODO 方法的作用？
     private boolean waitingForHandler() throws InterruptedException {
         lock.lock();
         try {
+            //await方法：当前线程进入等待状态，如果其他线程调用condition的signal或者signalAll
+            // 方法并且当前线程获取Lock从await方法返回，如果在等待状态中被中断会抛出被中断异常
             return connected.await(this.connectTimeoutMillis, TimeUnit.MILLISECONDS);
         } finally {
             lock.unlock();
         }
     }
-
+    // 实现负载均衡
     public RpcClientHandler chooseHandler() {
         int size = connectedHandlers.size();
         while (isRuning && size <= 0) {
@@ -174,7 +200,9 @@ public class ConnectManage {
                 throw new RuntimeException("Can't connect any servers!", e);
             }
         }
+        //Round Robin 轮询调度算法实现负载均衡
         int index = (roundRobin.getAndAdd(1) + size) % size;
+        //由于都是相同的Handler，所以可以随机返回一个使用
         return connectedHandlers.get(index);
     }
 

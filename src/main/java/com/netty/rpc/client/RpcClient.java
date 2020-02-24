@@ -1,6 +1,6 @@
 package com.netty.rpc.client;
 
-import com.netty.rpc.client.proxy.ObjectProxy;
+import com.netty.rpc.client.proxy.ProxyHandler;
 import com.netty.rpc.registry.ServiceDiscovery;
 import com.netty.rpc.client.proxy.IAsyncObjectProxy;
 
@@ -34,12 +34,12 @@ public class RpcClient {
         return (T) Proxy.newProxyInstance(
                 interfaceClass.getClassLoader(),
                 new Class<?>[]{interfaceClass},
-                new ObjectProxy<T>(interfaceClass)
+                new ProxyHandler<T>(interfaceClass)
         );
     }
 
     public static <T> IAsyncObjectProxy createAsync(Class<T> interfaceClass) {
-        return new ObjectProxy<T>(interfaceClass);
+        return new ProxyHandler<T>(interfaceClass);
     }
 
     public static void submit(Runnable task) {

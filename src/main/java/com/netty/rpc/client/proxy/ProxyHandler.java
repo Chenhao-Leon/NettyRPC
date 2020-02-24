@@ -14,11 +14,11 @@ import java.util.UUID;
 /**
  * Created by luxiaoxun on 2016-03-16.
  */
-public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ObjectProxy.class);
+public class ProxyHandler<T> implements InvocationHandler, IAsyncObjectProxy {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProxyHandler.class);
     private Class<T> clazz;
 
-    public ObjectProxy(Class<T> clazz) {
+    public ProxyHandler(Class<T> clazz) {
         this.clazz = clazz;
     }
 
@@ -39,7 +39,9 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
             }
         }
 
+        //声明类不是Object，则将请求封装到RpcRequest中发送
         RpcRequest request = new RpcRequest();
+        //Universally Unique Identifier全局唯一标识符,它保证对在同一时空中的所有机器都是唯一的。
         request.setRequestId(UUID.randomUUID().toString());
         request.setClassName(method.getDeclaringClass().getName());
         request.setMethodName(method.getName());
@@ -57,6 +59,7 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
 
         RpcClientHandler handler = ConnectManage.getInstance().chooseHandler();
         RPCFuture rpcFuture = handler.sendRequest(request);
+        // TODO 这里返回Object为什么最后是String
         return rpcFuture.get();
     }
 

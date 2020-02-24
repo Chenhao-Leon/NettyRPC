@@ -41,6 +41,12 @@ public class RPCFuture implements Future<Object> {
         return sync.isDone();
     }
 
+    /**
+     * 操作未完成则阻塞，直到完成获取操作结果
+     * @return
+     * @throws InterruptedException
+     * @throws ExecutionException
+     */
     @Override
     public Object get() throws InterruptedException, ExecutionException {
         sync.acquire(-1);
@@ -72,6 +78,11 @@ public class RPCFuture implements Future<Object> {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * 取消请求
+     * @param mayInterruptIfRunning
+     * @return
+     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         throw new UnsupportedOperationException();

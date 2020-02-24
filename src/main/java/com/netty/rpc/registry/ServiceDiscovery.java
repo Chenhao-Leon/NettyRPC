@@ -77,6 +77,7 @@ public class ServiceDiscovery {
             List<String> nodeList = zk.getChildren(Constant.ZK_REGISTRY_PATH, new Watcher() {
                 @Override
                 public void process(WatchedEvent event) {
+                    //监听器执行一次就失效了，所以每次执行后需要再次注册
                     if (event.getType() == Event.EventType.NodeChildrenChanged) {
                         watchNode(zk);
                     }

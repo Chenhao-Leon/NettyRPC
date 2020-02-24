@@ -30,6 +30,9 @@ public class ServiceRegistry {
         this.registryAddress = registryAddress;
     }
 
+    /**
+     * @param data 服务提供服务器的IP地址
+     */
     public void register(String data) {
         if (data != null) {
             ZooKeeper zk = connectServer();
@@ -43,47 +46,52 @@ public class ServiceRegistry {
     private ZooKeeper connectServer() {
         ZooKeeper zk = null;
         try {
+            //创建一个zookeeper客户端，通过此客户端实现增删服务器结点的操作
+            //此构造方法是异步的，会立即返回一个结果，因此加一个监听器，当连接成功主线程才继续执行
             zk = new ZooKeeper(registryAddress, Constant.ZK_SESSION_TIMEOUT, new Watcher() {
                 @Override
                 public void process(WatchedEvent event) {
+                    //客户端连接成功latch减1
                     if (event.getState() == Event.KeeperState.SyncConnected) {
                         latch.countDown();
                     }
                 }
             });
+            //阻塞直到客户端成功连接
             latch.await();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             logger.error("", e);
-        }
-        catch (InterruptedException ex){
-            logger.error("", ex);
         }
         return zk;
     }
 
+    /**
+     * 如果没有/registry结点则添加
+     * @param zk
+     */
     private void AddRootNode(ZooKeeper zk){
         try {
             Stat s = zk.exists(Constant.ZK_REGISTRY_PATH, false);
             if (s == null) {
                 zk.create(Constant.ZK_REGISTRY_PATH, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             }
-        } catch (KeeperException e) {
-            logger.error(e.toString());
-        } catch (InterruptedException e) {
+        } catch (KeeperException | InterruptedException e) {
             logger.error(e.toString());
         }
     }
 
+    /**
+     * 增加一个结点，并将提供服务的IP存到该结点中
+     * @param zk
+     * @param data 提供服务的IP
+     */
     private void createNode(ZooKeeper zk, String data) {
         try {
             byte[] bytes = data.getBytes();
             String path = zk.create(Constant.ZK_DATA_PATH, bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-            logger.debug("create zookeeper node ({} => {})", path, data);
-        } catch (KeeperException e) {
+            logger.info("create zookeeper node ({} => {})", path, data);
+        } catch (KeeperException | InterruptedException e) {
             logger.error("", e);
-        }
-        catch (InterruptedException ex){
-            logger.error("", ex);
         }
     }
 }

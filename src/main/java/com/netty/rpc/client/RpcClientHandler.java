@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
     private static final Logger logger = LoggerFactory.getLogger(RpcClientHandler.class);
 
+    //pend v.悬而未决，管理没有完成的RPCFuture
     private ConcurrentHashMap<String, RPCFuture> pendingRPC = new ConcurrentHashMap<>();
 
     private volatile Channel channel;
@@ -30,6 +31,11 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
         return remotePeer;
     }
 
+    /**
+     * 每当一个连接建立就调用此方法
+     * @param ctx
+     * @throws Exception
+     */
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
@@ -42,6 +48,12 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
         this.channel = ctx.channel();
     }
 
+    /**
+     * 处理请求的方法
+     * @param ctx
+     * @param response
+     * @throws Exception
+     */
     @Override
     public void channelRead0(ChannelHandlerContext ctx, RpcResponse response) throws Exception {
         String requestId = response.getRequestId();
@@ -52,6 +64,12 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
         }
     }
 
+    /**
+     * 出现IO错误等调用此方法
+     * @param ctx
+     * @param cause
+     * @throws Exception
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.error("client caught exception", cause);
@@ -77,7 +95,6 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
         } catch (InterruptedException e) {
             logger.error(e.getMessage());
         }
-
         return rpcFuture;
     }
 }

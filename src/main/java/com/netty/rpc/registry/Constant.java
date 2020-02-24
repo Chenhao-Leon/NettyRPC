@@ -5,6 +5,7 @@ package com.netty.rpc.registry;
  *
  * @author huangyong
  */
+// TODO 设置常数的几种方法
 public interface Constant {
 
     int ZK_SESSION_TIMEOUT = 5000;
