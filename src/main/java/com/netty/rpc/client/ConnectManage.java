@@ -81,29 +81,29 @@ public class ConnectManage {
                 }
                 connectedSockets = newConnectedSockets;
 
-                // 增加新的服务器结点
-                for (final InetSocketAddress serverNodeAddress : newAllServerNodeSet) {
-                    if (!connectedServerNodes.keySet().contains(serverNodeAddress)) {
-                        connectServerNode(serverNodeAddress);
-                        logger.info("发现新服务器结点" + serverNodeAddress);
-                    }
-                }
-
-                // 移除无效的服务器结点
-                for (int i = 0; i < connectedHandlers.size(); ++i) {
-                    RpcClientHandler connectedServerHandler = connectedHandlers.get(i);
-                    SocketAddress remotePeer = connectedServerHandler.getRemotePeer();
-                    if (!newAllServerNodeSet.contains(remotePeer)) {
-                        logger.info("Remove invalid server node " + remotePeer);
-                        RpcClientHandler handler = connectedServerNodes.get(remotePeer);
-                        if (handler != null) {
-                            handler.close();
-                        }
-                        connectedServerNodes.remove(remotePeer);
-                        connectedHandlers.remove(connectedServerHandler);
-                        logger.info("移除服务结点" + remotePeer);
-                    }
-                }
+//                // 增加新的服务器结点
+//                for (final InetSocketAddress serverNodeAddress : newAllServerNodeSet) {
+//                    if (!connectedServerNodes.keySet().contains(serverNodeAddress)) {
+//                        connectServerNode(serverNodeAddress);
+//                        logger.info("发现新服务器结点" + serverNodeAddress);
+//                    }
+//                }
+//
+//                // 移除无效的服务器结点
+//                for (int i = 0; i < connectedHandlers.size(); ++i) {
+//                    RpcClientHandler connectedServerHandler = connectedHandlers.get(i);
+//                    SocketAddress remotePeer = connectedServerHandler.getRemotePeer();
+//                    if (!newAllServerNodeSet.contains(remotePeer)) {
+//                        logger.info("Remove invalid server node " + remotePeer);
+//                        RpcClientHandler handler = connectedServerNodes.get(remotePeer);
+//                        if (handler != null) {
+//                            handler.close();
+//                        }
+//                        connectedServerNodes.remove(remotePeer);
+//                        connectedHandlers.remove(connectedServerHandler);
+//                        logger.info("移除服务结点" + remotePeer);
+//                    }
+//                }
 
             } else { // No available server node ( All server nodes are down )
                 logger.error("No available server node. All server nodes are down !!!");
@@ -194,14 +194,17 @@ public class ConnectManage {
             lock.unlock();
         }
     }
-    // 实现负载均衡
+
     public RpcClientHandler chooseHandler(String name){
+        InetSocketAddress socketAddress = connectedSockets.get(name);
         try {
+            if(!connectedServerNodes.containsKey(socketAddress))
+                connectServerNode(socketAddress);
             waitingForHandler();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return connectedServerNodes.get(connectedSockets.get(name));
+        return connectedServerNodes.get(socketAddress);
 //        int size = connectedHandlers.size();
 //        while (isRuning && size <= 0) {
 //            try {
