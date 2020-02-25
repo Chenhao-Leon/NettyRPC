@@ -1,6 +1,7 @@
 package com.netty.rpc.registry;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -33,12 +34,12 @@ public class ServiceRegistry {
     /**
      * @param data 服务提供服务器的IP地址
      */
-    public void register(String data) {
+    public void register(String data, List<String> interfaceName) {
         if (data != null) {
             ZooKeeper zk = connectServer();
             if (zk != null) {
                 AddRootNode(zk); // Add root node if not exist
-                createNode(zk, data);
+                createNode(zk, data, interfaceName);
             }
         }
     }
@@ -85,9 +86,12 @@ public class ServiceRegistry {
      * @param zk
      * @param data 提供服务的IP
      */
-    private void createNode(ZooKeeper zk, String data) {
+    private void createNode(ZooKeeper zk, String data, List<String> interfaceName) {
         try {
-            byte[] bytes = data.getBytes();
+            StringBuilder dataBuilder = new StringBuilder(data);
+            for(String tmp : interfaceName)
+                dataBuilder.append(" ").append(tmp);
+            byte[] bytes = dataBuilder.toString().getBytes();
             String path = zk.create(Constant.ZK_DATA_PATH, bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
             logger.info("create zookeeper node ({} => {})", path, data);
         } catch (KeeperException | InterruptedException e) {

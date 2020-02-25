@@ -14,6 +14,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -41,7 +42,7 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
     private String serverAddress;
     private ServiceRegistry serviceRegistry;
 
-    //全限定类名->对象
+    //接口的全限定类名->对象
     private Map<String, Object> handlerMap = new HashMap<>();
     private static ThreadPoolExecutor threadPoolExecutor;
 
@@ -68,7 +69,7 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
         if (MapUtils.isNotEmpty(serviceBeanMap)) {
             // TODO 遍历HashMap的key和value的原理
             for (Object serviceBean : serviceBeanMap.values()) {
-                //获取带有RpcService注解的全限定类名
+                //获取带有RpcService注解类的全限定类名
                 String interfaceName = serviceBean.getClass().getAnnotation(RpcService.class).value().getName();
                 logger.info("Loading service: {}", interfaceName);
                 handlerMap.put(interfaceName, serviceBean);
@@ -154,7 +155,7 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
             logger.info("Server started on port {}", port);
 
             if (serviceRegistry != null) {
-                serviceRegistry.register(serverAddress);
+                serviceRegistry.register(serverAddress, new ArrayList<>(handlerMap.keySet()));
             }
 
             //等待直到服务器套接字（server socket）关闭

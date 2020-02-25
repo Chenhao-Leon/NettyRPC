@@ -70,8 +70,6 @@ public class RpcHandler extends SimpleChannelInboundHandler<RpcRequest> {
         for (int i = 0; i < parameters.length; ++i) {
             logger.debug(parameters[i].toString());
         }
-
-        // TODO 这几种反射的区别
         // JDK reflect
         /*Method method = serviceClass.getMethod(methodName, parameterTypes);
         method.setAccessible(true);

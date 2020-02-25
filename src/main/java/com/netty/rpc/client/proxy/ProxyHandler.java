@@ -57,15 +57,16 @@ public class ProxyHandler<T> implements InvocationHandler, IAsyncObjectProxy {
             LOGGER.debug(args[i].toString());
         }
 
-        RpcClientHandler handler = ConnectManage.getInstance().chooseHandler();
+        RpcClientHandler handler = ConnectManage.getInstance().chooseHandler(method.getDeclaringClass().getName());
         RPCFuture rpcFuture = handler.sendRequest(request);
-        // TODO 这里返回Object为什么最后是String
         return rpcFuture.get();
     }
 
     @Override
     public RPCFuture call(String funcName, Object... args) {
-        RpcClientHandler handler = ConnectManage.getInstance().chooseHandler();
+        // TODO name
+        RpcClientHandler handler = null;
+        handler = ConnectManage.getInstance().chooseHandler(" ");
         RpcRequest request = createRequest(this.clazz.getName(), funcName, args);
         RPCFuture rpcFuture = handler.sendRequest(request);
         return rpcFuture;

@@ -15,9 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -32,6 +30,7 @@ public class ConnectManage {
     private volatile static ConnectManage connectManage;
 
     private EventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
+    //ArrayBlockingQueue是数组实现的线程安全的有界的阻塞队列
     private static ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(16, 16,
             600L, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(65536));
 
@@ -40,6 +39,7 @@ public class ConnectManage {
     //不能使用set的原因是在移除无效结点时需要关闭该channel，所以需要通过Handler获取
     //作用：记录注册机所有结点
     private Map<InetSocketAddress, RpcClientHandler> connectedServerNodes = new ConcurrentHashMap<>();
+    private Map<String, InetSocketAddress> connectedSockets = new ConcurrentHashMap<>();
 
     private ReentrantLock lock = new ReentrantLock();
     private Condition connected = lock.newCondition();
@@ -66,15 +66,20 @@ public class ConnectManage {
             if (allServerAddress.size() > 0) {
                 //将服务器结点加到set容器
                 HashSet<InetSocketAddress> newAllServerNodeSet = new HashSet<InetSocketAddress>();
+                Map<String, InetSocketAddress> newConnectedSockets = new ConcurrentHashMap<>();
                 for (int i = 0; i < allServerAddress.size(); ++i) {
-                    String[] array = allServerAddress.get(i).split(":");
-                    if (array.length == 2) { // Should check IP and port
-                        String host = array[0];
-                        int port = Integer.parseInt(array[1]);
+                    String[] array = allServerAddress.get(i).split(" ");
+                    String[] socket = array[0].split(":");
+                    if (socket.length == 2) { // Should check IP and port
+                        String host = socket[0];
+                        int port = Integer.parseInt(socket[1]);
                         final InetSocketAddress remotePeer = new InetSocketAddress(host, port);
                         newAllServerNodeSet.add(remotePeer);
+                        for (int j = 1; j < array.length; j++)
+                            newConnectedSockets.put(array[j], remotePeer);
                     }
                 }
+                connectedSockets = newConnectedSockets;
 
                 // 增加新的服务器结点
                 for (final InetSocketAddress serverNodeAddress : newAllServerNodeSet) {
@@ -160,7 +165,6 @@ public class ConnectManage {
     }
 
     private void addHandler(RpcClientHandler handler) {
-        connectedHandlers.add(handler);
         InetSocketAddress remoteAddress = (InetSocketAddress) handler.getChannel().remoteAddress();
         connectedServerNodes.put(remoteAddress, handler);
         signalAvailableHandler();
@@ -175,7 +179,11 @@ public class ConnectManage {
         }
     }
 
-    // TODO 方法的作用？
+    /**
+     * 等待直到handler成功添加
+     * @return
+     * @throws InterruptedException
+     */
     private boolean waitingForHandler() throws InterruptedException {
         lock.lock();
         try {
@@ -187,23 +195,29 @@ public class ConnectManage {
         }
     }
     // 实现负载均衡
-    public RpcClientHandler chooseHandler() {
-        int size = connectedHandlers.size();
-        while (isRuning && size <= 0) {
-            try {
-                boolean available = waitingForHandler();
-                if (available) {
-                    size = connectedHandlers.size();
-                }
-            } catch (InterruptedException e) {
-                logger.error("Waiting for available node is interrupted! ", e);
-                throw new RuntimeException("Can't connect any servers!", e);
-            }
+    public RpcClientHandler chooseHandler(String name){
+        try {
+            waitingForHandler();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        //Round Robin 轮询调度算法实现负载均衡
-        int index = (roundRobin.getAndAdd(1) + size) % size;
-        //由于都是相同的Handler，所以可以随机返回一个使用
-        return connectedHandlers.get(index);
+        return connectedServerNodes.get(connectedSockets.get(name));
+//        int size = connectedHandlers.size();
+//        while (isRuning && size <= 0) {
+//            try {
+//                boolean available = waitingForHandler();
+//                if (available) {
+//                    size = connectedHandlers.size();
+//                }
+//            } catch (InterruptedException e) {
+//                logger.error("Waiting for available node is interrupted! ", e);
+//                throw new RuntimeException("Can't connect any servers!", e);
+//            }
+//        }
+//        //Round Robin 轮询调度算法实现负载均衡
+//        int index = (roundRobin.getAndAdd(1) + size) % size;
+//        //由于都是相同的Handler，所以可以随机返回一个使用
+//        return connectedHandlers.get(index);
     }
 
     public void stop() {

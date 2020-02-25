@@ -138,6 +138,9 @@ public class RPCFuture implements Future<Object> {
         });
     }
 
+    /**
+     * 自定义非公平同步器，来实现线程的同步
+     */
     static class Sync extends AbstractQueuedSynchronizer {
 
         private static final long serialVersionUID = 1L;
@@ -146,11 +149,22 @@ public class RPCFuture implements Future<Object> {
         private final int done = 1;
         private final int pending = 0;
 
+        /**
+         * 该方法获取锁（状态）前并没有检查队列是否为空，所以是非公平锁
+         * 独占方式。尝试获取资源，成功则返回true，失败则返回false。
+         * @param arg
+         * @return
+         */
         @Override
         protected boolean tryAcquire(int arg) {
             return getState() == done;
         }
 
+        /**
+         * 独占方式。尝试释放资源，成功则返回true，失败则返回false。
+         * @param arg
+         * @return
+         */
         @Override
         protected boolean tryRelease(int arg) {
             if (getState() == pending) {
