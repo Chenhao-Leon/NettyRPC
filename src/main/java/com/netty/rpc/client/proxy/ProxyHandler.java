@@ -64,9 +64,8 @@ public class ProxyHandler<T> implements InvocationHandler, IAsyncObjectProxy {
 
     @Override
     public RPCFuture call(String funcName, Object... args) {
-        // TODO name
         RpcClientHandler handler = null;
-        handler = ConnectManage.getInstance().chooseHandler(" ");
+        handler = ConnectManage.getInstance().chooseHandler(clazz.getName());
         RpcRequest request = createRequest(this.clazz.getName(), funcName, args);
         RPCFuture rpcFuture = handler.sendRequest(request);
         return rpcFuture;
