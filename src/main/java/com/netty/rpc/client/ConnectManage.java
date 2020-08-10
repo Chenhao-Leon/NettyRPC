@@ -23,7 +23,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 采用单例模式，用于管理连接
- * Created by luxiaoxun on 2016-03-16.
  */
 public class ConnectManage {
     private static final Logger logger = LoggerFactory.getLogger(ConnectManage.class);

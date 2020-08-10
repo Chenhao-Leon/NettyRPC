@@ -4,9 +4,6 @@ import com.netty.rpc.client.RpcClient;
 import com.netty.rpc.registry.ServiceDiscovery;
 import com.netty.rpc.test.client.HelloService;
 
-/**
- * Created by luxiaoxun on 2016-03-11.
- */
 public class Benchmark {
 
     public static void main(String[] args) throws InterruptedException {

@@ -11,9 +11,6 @@ import com.netty.rpc.registry.ServiceDiscovery;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-/**
- * Created by luxiaoxun on 2016/3/17.
- */
 public class PersonCallbackTest {
     public static void main(String[] args) {
         ServiceDiscovery serviceDiscovery = new ServiceDiscovery("127.0.0.1:2181");

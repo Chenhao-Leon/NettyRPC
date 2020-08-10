@@ -15,7 +15,6 @@ import java.util.HashMap;
 
 /**
  * Json Util
- * Created by luxiaoxun on 2016-03-09.
  */
 public class JsonUtil {
     private static ObjectMapper objMapper = new ObjectMapper();

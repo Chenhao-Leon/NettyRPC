@@ -11,9 +11,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
-/**
- * Created by luxiaoxun on 2016-03-16.
- */
 public class ProxyHandler<T> implements InvocationHandler, IAsyncObjectProxy {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProxyHandler.class);
     private Class<T> clazz;

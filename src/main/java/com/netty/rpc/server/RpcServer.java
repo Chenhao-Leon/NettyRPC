@@ -30,8 +30,6 @@ import org.springframework.context.ApplicationContextAware;
 
 /**
  * RPC Server
- *
- * @author huangyong, luxiaoxun
  * @description 实现ApplicationContextAware是为了得到被注解RpcService标记的对象，
  * 实现InitializingBean是为了在获得对象后启动服务器
  */

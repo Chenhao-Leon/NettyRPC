@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * RPCFuture for async RPC call
- * Created by luxiaoxun on 2016-03-15.
  */
 public class RPCFuture implements Future<Object> {
     private static final Logger logger = LoggerFactory.getLogger(RPCFuture.class);
@@ -49,6 +48,7 @@ public class RPCFuture implements Future<Object> {
      */
     @Override
     public Object get() throws InterruptedException, ExecutionException {
+        //使用自定义同步器实现同步，arg无意义。如果status==isDone成功返回，否则无限重试
         sync.acquire(-1);
         if (this.response != null) {
             return this.response.getResult();
@@ -90,6 +90,7 @@ public class RPCFuture implements Future<Object> {
 
     public void done(RpcResponse reponse) {
         this.response = reponse;
+        //通过自定义同步器将status置为isDone，和arg无关。
         sync.release(1);
         invokeCallbacks();
         // Threshold
@@ -145,14 +146,16 @@ public class RPCFuture implements Future<Object> {
 
         private static final long serialVersionUID = 1L;
 
-        //future status
+        //AQS中的status对于独占锁和共享锁的意义是不同的。对于独占锁，status表示获取到该临界资源的线程个数，即status=0表示没有线程获取，status=1该资源已被线程获取；
+        //对于共享锁status表示剩余可获取锁个数，即status>0表示还可以获取，status=0表示已经没有锁了获取失败
+        //status初始为0
         private final int done = 1;
         private final int pending = 0;
 
         /**
          * 该方法获取锁（状态）前并没有检查队列是否为空，所以是非公平锁
          * 独占方式。尝试获取资源，成功则返回true，失败则返回false。
-         * @param arg
+         * @param arg 这里没有用到arg，方法返回结果和arg无关
          * @return
          */
         @Override

@@ -11,8 +11,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * RPC Client（Create RPC proxy）
- *
- * @author luxiaoxun
  */
 public class RpcClient {
 

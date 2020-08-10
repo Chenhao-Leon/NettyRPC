@@ -8,9 +8,6 @@ import com.netty.rpc.client.proxy.IAsyncObjectProxy;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created by luxiaoxun on 2016/3/16.
- */
 public class BenchmarkAsync {
     public static void main(String[] args) throws InterruptedException {
         ServiceDiscovery serviceDiscovery = new ServiceDiscovery("127.0.0.1:2181");
